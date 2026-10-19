@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [PlaceEntity::class, MaterialItemEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class KreyosDatabase : RoomDatabase() {

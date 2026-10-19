@@ -380,7 +380,43 @@ fun KreyosApp(
             placeWithMaterials = placeWithMaterials,
             sheetState = detailSheetState,
             onDismiss = { viewModel.selectPlace(null) },
-            onAddMaterialClick = { viewModel.setPlaceForAddingMaterial(placeWithMaterials) },
+            onAddMaterialDirect = { name, metalType, weightKg, pricePerKg, condition, notes, quantity, storageLocation, depthMeters, estimatedLengthMeters, customTotalValueEur ->
+                viewModel.addMaterialToPlace(
+                    placeId = placeWithMaterials.place.id,
+                    name = name,
+                    metalType = metalType,
+                    weightKg = weightKg,
+                    pricePerKg = pricePerKg,
+                    condition = condition,
+                    notes = notes,
+                    quantity = quantity,
+                    storageLocation = storageLocation,
+                    depthMeters = depthMeters,
+                    estimatedLengthMeters = estimatedLengthMeters,
+                    customTotalValueEur = customTotalValueEur
+                )
+            },
+            onLogUndergroundDeposit = { lengthMeters, depthMeters, cableType ->
+                viewModel.logUndergroundCableDeposit(
+                    placeId = placeWithMaterials.place.id,
+                    cableLengthMeters = lengthMeters,
+                    depthMeters = depthMeters,
+                    cableType = cableType
+                )
+            },
+            onLogRailCargo = { description, metalType, weightKg, wagonsCount ->
+                viewModel.addMaterialToPlace(
+                    placeId = placeWithMaterials.place.id,
+                    name = description,
+                    metalType = metalType,
+                    weightKg = weightKg,
+                    pricePerKg = metalType.defaultPriceEurPerKg,
+                    condition = "OSINT Güterverkehr / Gleisverladung",
+                    notes = "Aufklärung Güterverkehr: $wagonsCount Waggon(s)/Ladestelle.",
+                    quantity = wagonsCount,
+                    storageLocation = "Gleisbett / Laderampe"
+                )
+            },
             onAutoRecalculateClick = { viewModel.triggerAutoMaterialGeneration(placeWithMaterials.place.id) },
             onDeletePlaceClick = { viewModel.deletePlace(placeWithMaterials.place.id) },
             onDeleteMaterialClick = { matId -> viewModel.deleteMaterial(matId) }
@@ -391,7 +427,7 @@ fun KreyosApp(
     if (showAddPlaceDialog) {
         AddPlaceDialog(
             onDismiss = { viewModel.showAddPlace(false) },
-            onConfirm = { name, category, craftType, siteType, isBuilding, hasUtility, address, notes ->
+            onConfirm = { name, category, craftType, siteType, isBuilding, hasUtility, address, notes, vacancyStatus, hasRailAccess, railNotes, cableLen, cableType ->
                 viewModel.addNewPlace(
                     name = name,
                     category = category,
@@ -400,7 +436,12 @@ fun KreyosApp(
                     isBuilding = isBuilding,
                     hasUndergroundUtility = hasUtility,
                     address = address,
-                    notes = notes
+                    notes = notes,
+                    vacancyStatus = vacancyStatus,
+                    hasRailAccess = hasRailAccess,
+                    railNotes = railNotes,
+                    undergroundCableLengthM = cableLen,
+                    undergroundCableType = cableType
                 )
             }
         )

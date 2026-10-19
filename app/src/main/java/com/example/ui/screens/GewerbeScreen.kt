@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -32,6 +34,8 @@ import com.example.data.PlaceWithMaterials
 import com.example.data.SiteType
 import com.example.ui.components.PlaceCard
 import com.example.ui.theme.BackgroundBlack
+import com.example.ui.theme.CopperOrange
+import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.CyanPrimary
 import com.example.ui.theme.GoldPrecious
 import com.example.ui.theme.SurfaceCard
@@ -58,6 +62,13 @@ fun GewerbeScreen(
             "FABRIK" -> site == SiteType.FABRIKHALLEN || craft == CraftType.FACTORY_HALL || craft == CraftType.CABLE_WORKS
             "WERKSTATT" -> site == SiteType.WERKSTATT || craft == CraftType.BRASS_WORKSHOP
             "LAGER" -> site == SiteType.LAGERORT
+            "LOST_PLACE" -> craft == CraftType.LOST_PLACE || site == SiteType.LOST_PLACE_INDUSTRIE ||
+                    p.vacancyStatus.contains("Lost Place", ignoreCase = true) ||
+                    p.vacancyStatus.contains("Leerstand", ignoreCase = true) ||
+                    site == SiteType.LEERSTAND_VERKAUF
+            "RAIL_CARGO" -> p.hasRailAccess || craft == CraftType.RAIL_CARGO || site == SiteType.GUETERBAHNHOF_GLEISANSCHLUSS
+            "ERDTRASSEN" -> p.hasUndergroundUtility || p.undergroundCableLengthM > 0 ||
+                    item.materials.any { it.storageLocation.contains("Erde", ignoreCase = true) }
             else -> true
         }
     }
@@ -102,7 +113,7 @@ fun GewerbeScreen(
                     )
                 }
                 Text(
-                    text = "Ausschließlich Industrie, Fabriken, Hallen & Werkstätten. Wohnimmobilien & Gastronomie sind strikt ausgeschlossen.",
+                    text = "Industriehallen, Fabriken, Lost Places, Leerstände & OSINT Rail Cargo. Wohnungen & Lokale strikt ausgeschlossen.",
                     color = TextMuted,
                     fontSize = 11.sp
                 )
@@ -110,15 +121,17 @@ fun GewerbeScreen(
                     modifier = Modifier.padding(top = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Metall-Volumen: %.1f kg".format(totalWeight), color = TextSecondary, fontSize = 11.sp)
+                    Text("Metall-Volumen: %.1f kg".format(totalWeight), color = CopperOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text("Gesamtwert: %,.2f €".format(totalValue), color = GoldPrecious, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // Subfilter Chips
+        // Subfilter Chips with Horizontal Scroll
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             FilterChip(
@@ -128,6 +141,42 @@ fun GewerbeScreen(
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = CyanPrimary.copy(alpha = 0.2f),
                     selectedLabelColor = CyanPrimary,
+                    containerColor = SurfaceCard,
+                    labelColor = TextSecondary
+                )
+            )
+
+            FilterChip(
+                selected = subFilter == "LOST_PLACE",
+                onClick = { subFilter = "LOST_PLACE" },
+                label = { Text("Lost Places & Leerstand", fontSize = 11.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = CrimsonAlert.copy(alpha = 0.25f),
+                    selectedLabelColor = CrimsonAlert,
+                    containerColor = SurfaceCard,
+                    labelColor = TextSecondary
+                )
+            )
+
+            FilterChip(
+                selected = subFilter == "RAIL_CARGO",
+                onClick = { subFilter = "RAIL_CARGO" },
+                label = { Text("OSINT Rail Cargo", fontSize = 11.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFF0284C7).copy(alpha = 0.25f),
+                    selectedLabelColor = Color(0xFF38BDF8),
+                    containerColor = SurfaceCard,
+                    labelColor = TextSecondary
+                )
+            )
+
+            FilterChip(
+                selected = subFilter == "ERDTRASSEN",
+                onClick = { subFilter = "ERDTRASSEN" },
+                label = { Text("Erdtrassen & Altkabel", fontSize = 11.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = CopperOrange.copy(alpha = 0.2f),
+                    selectedLabelColor = CopperOrange,
                     containerColor = SurfaceCard,
                     labelColor = TextSecondary
                 )

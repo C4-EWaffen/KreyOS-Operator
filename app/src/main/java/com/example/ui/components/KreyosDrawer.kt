@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Plumbing
 import androidx.compose.material.icons.filled.Roofing
+import androidx.compose.material.icons.filled.Train
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ import com.example.ui.NavigationTab
 import com.example.ui.theme.BackgroundBlack
 import com.example.ui.theme.BrassYellow
 import com.example.ui.theme.CopperOrange
+import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.CyanPrimary
 import com.example.ui.theme.EmeraldActive
 import com.example.ui.theme.GoldPrecious
@@ -254,6 +256,18 @@ fun KreyosDrawerContent(
         CraftFilterRow(name = "Alle Gewerbe anzeigen", icon = Icons.Default.Business, color = CyanPrimary) {
             onSelectCraftPreset(null)
             onTabSelected(NavigationTab.HANDWERK)
+            onCloseDrawer()
+        }
+
+        CraftFilterRow(name = "Lost Places & Stillgelegt", icon = Icons.Default.Factory, color = CrimsonAlert) {
+            onSelectCraftPreset(CraftType.LOST_PLACE)
+            onTabSelected(NavigationTab.GEWERBE)
+            onCloseDrawer()
+        }
+
+        CraftFilterRow(name = "OSINT Rail & Güterverkehr", icon = Icons.Default.Train, color = Color(0xFF38BDF8)) {
+            onSelectCraftPreset(CraftType.RAIL_CARGO)
+            onTabSelected(NavigationTab.GEWERBE)
             onCloseDrawer()
         }
 

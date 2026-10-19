@@ -26,6 +26,11 @@ data class PlaceEntity(
     val markerColor: String = "#00D9FF",
     val notes: String = "",
     val isManual: Boolean = false,
+    val vacancyStatus: String = "Aktiv", // "Aktiv", "Leerstand", "Zum Verkauf", "Zur Miete", "Lost Place"
+    val hasRailAccess: Boolean = false,
+    val railNotes: String = "",
+    val undergroundCableLengthM: Double = 0.0,
+    val undergroundCableType: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -52,6 +57,9 @@ data class MaterialItemEntity(
     val totalValueEur: Double,
     val condition: String = "Gesichtet",
     val quantity: Int = 1,
+    val storageLocation: String = "Oberirdisch / Halle", // from StorageLocation.displayName or text
+    val depthMeters: Double = 0.0,
+    val estimatedLengthMeters: Double = 0.0,
     val notes: String = "",
     val autoDetected: Boolean = false,
     val detectedReason: String = ""

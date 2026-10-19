@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -38,12 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.CraftType
 import com.example.data.SiteType
 import com.example.ui.theme.BackgroundBlack
+import com.example.ui.theme.CopperOrange
 import com.example.ui.theme.CyanPrimary
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceCardBorder
@@ -62,7 +65,12 @@ fun AddPlaceDialog(
         isBuilding: Boolean,
         hasUndergroundUtility: Boolean,
         address: String,
-        notes: String
+        notes: String,
+        vacancyStatus: String,
+        hasRailAccess: Boolean,
+        railNotes: String,
+        undergroundCableLengthM: Double,
+        undergroundCableType: String
     ) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -73,8 +81,24 @@ fun AddPlaceDialog(
     var isBuilding by remember { mutableStateOf(true) }
     var hasUtility by remember { mutableStateOf(false) }
 
+    var vacancyStatus by remember { mutableStateOf("Aktiv in Betrieb") }
+    var hasRailAccess by remember { mutableStateOf(false) }
+    var railNotes by remember { mutableStateOf("") }
+    var undergroundCableLengthInput by remember { mutableStateOf("0") }
+    var undergroundCableType by remember { mutableStateOf("") }
+
     var craftMenuExpanded by remember { mutableStateOf(false) }
     var siteMenuExpanded by remember { mutableStateOf(false) }
+    var statusMenuExpanded by remember { mutableStateOf(false) }
+
+    val statusOptions = listOf(
+        "Aktiv in Betrieb",
+        "Lost Place / Stillgelegt",
+        "Leerstand (Zu Vermieten & Kauf)",
+        "Aktive Kundenbaustelle",
+        "Passive Baustelle (Baustopp)",
+        "OSINT Rail / Güterverkehr"
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -103,7 +127,7 @@ fun AddPlaceDialog(
                             fontFamily = FontFamily.Monospace
                         )
                         Text(
-                            text = "Gewerbe, Handwerk oder Baustelle",
+                            text = "Gewerbe, Lost Places, Leerstand & Rail Cargo",
                             color = TextMuted,
                             fontSize = 11.sp
                         )
@@ -119,7 +143,7 @@ fun AddPlaceDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name / Bezeichnung", fontSize = 12.sp) },
-                    placeholder = { Text("z.B. Kupfer & Kabel Zentrallager") },
+                    placeholder = { Text("z.B. Walzwerk Bergland (Lost Place)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -132,6 +156,47 @@ fun AddPlaceDialog(
                     )
                 )
 
+                // Status / Vacancy (Lost Place vs Leerstand vs Aktiv)
+                Text("Immobilien- & Betriebsstatus:", color = TextSecondary, fontSize = 11.sp)
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceCard, RoundedCornerShape(6.dp))
+                            .border(1.dp, SurfaceCardBorder, RoundedCornerShape(6.dp))
+                            .clickable { statusMenuExpanded = true }
+                            .padding(12.dp)
+                    ) {
+                        Text(vacancyStatus, color = CyanPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+
+                    DropdownMenu(
+                        expanded = statusMenuExpanded,
+                        onDismissRequest = { statusMenuExpanded = false },
+                        modifier = Modifier.background(SurfaceCard)
+                    ) {
+                        statusOptions.forEach { opt ->
+                            DropdownMenuItem(
+                                text = { Text(opt, color = TextPrimary, fontSize = 12.sp) },
+                                onClick = {
+                                    vacancyStatus = opt
+                                    if (opt.contains("Lost Place")) {
+                                        selectedCraft = CraftType.LOST_PLACE
+                                        selectedSiteType = SiteType.LOST_PLACE_INDUSTRIE
+                                    } else if (opt.contains("Leerstand")) {
+                                        selectedSiteType = SiteType.LEERSTAND_VERKAUF
+                                    } else if (opt.contains("Rail")) {
+                                        selectedCraft = CraftType.RAIL_CARGO
+                                        selectedSiteType = SiteType.GUETERBAHNHOF_GLEISANSCHLUSS
+                                        hasRailAccess = true
+                                    }
+                                    statusMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 // Craft Selection
                 Text("Gewerbeart:", color = TextSecondary, fontSize = 11.sp)
                 Box {
@@ -143,7 +208,7 @@ fun AddPlaceDialog(
                             .clickable { craftMenuExpanded = true }
                             .padding(12.dp)
                     ) {
-                        Text(selectedCraft.displayName, color = CyanPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(selectedCraft.displayName, color = CopperOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
 
                     DropdownMenu(
@@ -163,7 +228,7 @@ fun AddPlaceDialog(
                     }
                 }
 
-                // Site Type Selection (Firmensitz vs Lagerort vs Baustelle Aktiv/Passiv)
+                // Site Type Selection
                 Text("Standort-Typ:", color = TextSecondary, fontSize = 11.sp)
                 Box {
                     Box(
@@ -243,6 +308,78 @@ fun AddPlaceDialog(
                     Text("Bodenleitungen / Leitungsnetz vorhanden", color = TextPrimary, fontSize = 12.sp)
                 }
 
+                if (hasUtility) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = undergroundCableLengthInput,
+                            onValueChange = { undergroundCableLengthInput = it },
+                            label = { Text("Trassenlänge (m)", fontSize = 10.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = SurfaceCard,
+                                unfocusedContainerColor = SurfaceCard,
+                                focusedBorderColor = CopperOrange,
+                                unfocusedBorderColor = SurfaceCardBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+                        OutlinedTextField(
+                            value = undergroundCableType,
+                            onValueChange = { undergroundCableType = it },
+                            label = { Text("Kabeltyp (z.B. 10kV Altkabel Cu)", fontSize = 10.sp) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1.5f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = SurfaceCard,
+                                unfocusedContainerColor = SurfaceCard,
+                                focusedBorderColor = CopperOrange,
+                                unfocusedBorderColor = SurfaceCardBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { hasRailAccess = !hasRailAccess }
+                ) {
+                    Checkbox(
+                        checked = hasRailAccess,
+                        onCheckedChange = { hasRailAccess = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF0284C7),
+                            checkmarkColor = Color.White
+                        )
+                    )
+                    Text("OSINT Rail: Gleisanschluss / Güterbahn vorhanden", color = TextPrimary, fontSize = 12.sp)
+                }
+
+                if (hasRailAccess) {
+                    OutlinedTextField(
+                        value = railNotes,
+                        onValueChange = { railNotes = it },
+                        label = { Text("Rail Cargo Details (z.B. Schrottverladung, Rangiergleise)", fontSize = 11.sp) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = SurfaceCard,
+                            unfocusedContainerColor = SurfaceCard,
+                            focusedBorderColor = Color(0xFF0284C7),
+                            unfocusedBorderColor = SurfaceCardBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+                }
+
                 // Notes
                 OutlinedTextField(
                     value = notes,
@@ -250,7 +387,7 @@ fun AddPlaceDialog(
                     label = { Text("Notizen & Sichtungen (z.B. Cu, Werkzeuge)", fontSize = 12.sp) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp),
+                        .height(70.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = SurfaceCard,
                         unfocusedContainerColor = SurfaceCard,
@@ -263,6 +400,7 @@ fun AddPlaceDialog(
 
                 Button(
                     onClick = {
+                        val cableLen = undergroundCableLengthInput.toDoubleOrNull() ?: 0.0
                         onConfirm(
                             name,
                             selectedCraft.displayName,
@@ -271,7 +409,12 @@ fun AddPlaceDialog(
                             isBuilding,
                             hasUtility,
                             address,
-                            notes
+                            notes,
+                            vacancyStatus,
+                            hasRailAccess,
+                            railNotes,
+                            cableLen,
+                            undergroundCableType
                         )
                     },
                     modifier = Modifier

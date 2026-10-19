@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 enum class NavigationTab(val title: String, val badge: String) {
-    GEWERBE("Gewerbe & Hallen", "Fabriken"),
+    GEWERBE("Gewerbe & Hallen", "Fabriken/Lost Places"),
     HANDWERK("Handwerk & Sitze", "Lagerorte"),
     BAUSTELLEN("Kunden-Baustellen", "Aktiv/Passiv"),
     WERTSTOFFE("Wertstoffe & Cu/Ms", "Edelmetalle"),
@@ -91,9 +91,23 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
             // Tab-specific basic routing
             val matchesTab = when (tab) {
                 NavigationTab.GEWERBE -> {
-                    // Commercial properties: Factories, Halls, Workshops. Exclude residential / cafes.
-                    craft in listOf(CraftType.FACTORY_HALL, CraftType.BRASS_WORKSHOP, CraftType.CABLE_WORKS, CraftType.OTHER) ||
-                            site in listOf(SiteType.FABRIKHALLEN, SiteType.WERKSTATT, SiteType.LAGERORT)
+                    // Commercial properties: Factories, Halls, Workshops, Lost Places, Vacancies, Rail Cargo. Exclude residential / cafes.
+                    craft in listOf(
+                        CraftType.FACTORY_HALL,
+                        CraftType.BRASS_WORKSHOP,
+                        CraftType.CABLE_WORKS,
+                        CraftType.LOST_PLACE,
+                        CraftType.RAIL_CARGO,
+                        CraftType.UTILITY_POWER,
+                        CraftType.OTHER
+                    ) || site in listOf(
+                        SiteType.FABRIKHALLEN,
+                        SiteType.WERKSTATT,
+                        SiteType.LAGERORT,
+                        SiteType.LEERSTAND_VERKAUF,
+                        SiteType.LOST_PLACE_INDUSTRIE,
+                        SiteType.GUETERBAHNHOF_GLEISANSCHLUSS
+                    )
                 }
                 NavigationTab.HANDWERK -> {
                     // Trades: Roofers, Plumbers, Electricians, Cable works, Brass workshops
@@ -130,7 +144,7 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
             // Search query text matching
             if (filters.searchQuery.isNotBlank()) {
                 val q = filters.searchQuery.trim().lowercase()
-                val blob = "${p.name} ${p.address} ${p.category} ${p.notes} ${item.materials.joinToString(" ") { it.materialName }}".lowercase()
+                val blob = "${p.name} ${p.address} ${p.category} ${p.notes} ${p.vacancyStatus} ${p.railNotes} ${item.materials.joinToString(" ") { "${it.materialName} ${it.storageLocation}" }}".lowercase()
                 if (!blob.contains(q)) return@filter false
             }
 
@@ -142,6 +156,16 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             InitialDataSeeder.seedIfEmpty(placeDao, materialDao)
             refreshSunTimes()
+        }
+
+        // Keep selectedPlace in sync with latest db updates
+        viewModelScope.launch {
+            rawPlacesFlow.collect { allPlaces ->
+                val currentSelectedId = _selectedPlace.value?.place?.id
+                if (currentSelectedId != null) {
+                    _selectedPlace.value = allPlaces.find { it.place.id == currentSelectedId }
+                }
+            }
         }
     }
 
@@ -231,7 +255,12 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
         lat: Double = _currentLocation.value.first,
         lon: Double = _currentLocation.value.second,
         markerShape: String = "circle",
-        markerColor: String = "#00D9FF"
+        markerColor: String = "#00D9FF",
+        vacancyStatus: String = "Aktiv in Betrieb",
+        hasRailAccess: Boolean = false,
+        railNotes: String = "",
+        undergroundCableLengthM: Double = 0.0,
+        undergroundCableType: String = ""
     ) {
         viewModelScope.launch {
             val placeId = "pl_user_${UUID.randomUUID().toString().take(10)}"
@@ -243,14 +272,19 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
                 siteType = siteType.name,
                 isBuilding = isBuilding,
                 hasUndergroundUtility = hasUndergroundUtility,
-                status = "Manuell erfasst",
+                status = vacancyStatus,
                 lat = lat,
                 lon = lon,
                 address = address.ifBlank { "Koordinaten: $lat, $lon" },
                 markerShape = markerShape,
                 markerColor = markerColor,
                 notes = notes,
-                isManual = true
+                isManual = true,
+                vacancyStatus = vacancyStatus,
+                hasRailAccess = hasRailAccess,
+                railNotes = railNotes,
+                undergroundCableLengthM = undergroundCableLengthM,
+                undergroundCableType = undergroundCableType
             )
             placeDao.insertPlace(place)
 
@@ -259,7 +293,9 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
                 placeId = placeId,
                 craftType = craftType,
                 siteType = siteType,
-                customNotes = notes
+                customNotes = notes,
+                hasUndergroundUtility = hasUndergroundUtility,
+                undergroundCableLengthM = undergroundCableLengthM
             )
             materialDao.insertMaterials(autoMaterials)
             _showAddPlaceDialog.value = false
@@ -273,10 +309,15 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
         weightKg: Double,
         pricePerKg: Double,
         condition: String,
-        notes: String
+        notes: String,
+        quantity: Int = 1,
+        storageLocation: String = "Oberirdisch / Halle",
+        depthMeters: Double = 0.0,
+        estimatedLengthMeters: Double = 0.0,
+        customTotalValueEur: Double? = null
     ) {
         viewModelScope.launch {
-            val total = Math.round(weightKg * pricePerKg * 100.0) / 100.0
+            val total = customTotalValueEur ?: (Math.round(weightKg * pricePerKg * 100.0) / 100.0)
             val item = MaterialItemEntity(
                 id = "mat_user_${UUID.randomUUID().toString().take(10)}",
                 placeId = placeId,
@@ -286,13 +327,45 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
                 pricePerKg = pricePerKg,
                 totalValueEur = total,
                 condition = condition,
-                quantity = 1,
+                quantity = quantity.coerceAtLeast(1),
+                storageLocation = storageLocation,
+                depthMeters = depthMeters,
+                estimatedLengthMeters = estimatedLengthMeters,
                 notes = notes,
                 autoDetected = false,
-                detectedReason = "Manuelle Benutzererfassung"
+                detectedReason = "Manuelle Protokollierung"
             )
             materialDao.insertMaterial(item)
             _placeForAddingMaterial.value = null
+        }
+    }
+
+    fun logUndergroundCableDeposit(
+        placeId: String,
+        cableLengthMeters: Double,
+        depthMeters: Double = 1.0,
+        cableType: String = "10kV Bleimantel-Altkabel (3x185mm² Cu)"
+    ) {
+        val (weightKg, valueEur) = MaterialCategorizer.calculateUndergroundCopper(cableLengthMeters)
+        viewModelScope.launch {
+            val item = MaterialItemEntity(
+                id = "mat_erd_${UUID.randomUUID().toString().take(10)}",
+                placeId = placeId,
+                materialName = "Kupfer-Altbestand im Erdreich ($cableType)",
+                metalType = MetalType.KUPFER_KABEL.name,
+                weightKg = weightKg,
+                pricePerKg = MetalType.KUPFER_KABEL.defaultPriceEurPerKg,
+                totalValueEur = valueEur,
+                condition = "Altbestand im Boden vergraben",
+                quantity = 1,
+                storageLocation = "In der Erde / Erdtrasse",
+                depthMeters = depthMeters,
+                estimatedLengthMeters = cableLengthMeters,
+                notes = "Tiefbau-Erfassung: ca. 5.2 kg Cu/m bei ${cableLengthMeters.toInt()}m Trassenlänge in ${depthMeters}m Tiefe.",
+                autoDetected = false,
+                detectedReason = "Tiefbau Altbestands-Protokollierung"
+            )
+            materialDao.insertMaterial(item)
         }
     }
 
@@ -320,7 +393,9 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
                 placeId = placeId,
                 craftType = craft,
                 siteType = site,
-                customNotes = current.place.notes
+                customNotes = current.place.notes,
+                hasUndergroundUtility = current.place.hasUndergroundUtility,
+                undergroundCableLengthM = current.place.undergroundCableLengthM
             )
             materialDao.insertMaterials(generated)
         }
@@ -339,6 +414,8 @@ class KreyosViewModel(application: Application) : AndroidViewModel(application) 
             sb.append("    \"lat\": ${p.place.lat},\n")
             sb.append("    \"lon\": ${p.place.lon},\n")
             sb.append("    \"address\": \"${p.place.address.replace("\"", "\\\"")}\",\n")
+            sb.append("    \"vacancyStatus\": \"${p.place.vacancyStatus}\",\n")
+            sb.append("    \"hasRailAccess\": ${p.place.hasRailAccess},\n")
             sb.append("    \"totalWeightKg\": ${p.totalWeightKg},\n")
             sb.append("    \"totalValueEur\": ${p.totalEstimatedValueEur}\n")
             sb.append("  }${if (i < list.size - 1) "," else ""}\n")

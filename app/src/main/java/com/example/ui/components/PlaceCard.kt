@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.SouthEast
+import androidx.compose.material.icons.filled.Train
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -35,6 +37,7 @@ import com.example.data.PlaceWithMaterials
 import com.example.data.SiteType
 import com.example.ui.theme.BrassYellow
 import com.example.ui.theme.CopperOrange
+import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.CyanPrimary
 import com.example.ui.theme.EmeraldActive
 import com.example.ui.theme.GoldPrecious
@@ -70,14 +73,20 @@ fun PlaceCard(
         if (distMeters < 1000) "${distMeters.toInt()} m" else "%.2f km".format(distMeters / 1000.0)
     } else null
 
-    val badgeColor = when (site) {
-        SiteType.KUNDEN_BAUSTELLE_AKTIV -> EmeraldActive
-        SiteType.KUNDEN_BAUSTELLE_PASSIV -> CopperOrange
-        SiteType.FIRMENSITZ -> CyanPrimary
-        SiteType.LAGERORT -> BrassYellow
-        SiteType.FABRIKHALLEN -> Color(0xFFEF4444)
-        SiteType.WERKSTATT -> Color(0xFFEAB308)
-        SiteType.SONSTIGES -> Color(0xFF38BDF8)
+    val isLostPlace = place.vacancyStatus.contains("Lost Place", ignoreCase = true) || craft == CraftType.LOST_PLACE
+    val isLeerstand = place.vacancyStatus.contains("Leerstand", ignoreCase = true) || site == SiteType.LEERSTAND_VERKAUF
+    val isRail = place.hasRailAccess || craft == CraftType.RAIL_CARGO
+
+    val badgeColor = when {
+        isLostPlace -> CrimsonAlert
+        isLeerstand -> Color(0xFFF59E0B)
+        site == SiteType.KUNDEN_BAUSTELLE_AKTIV -> EmeraldActive
+        site == SiteType.KUNDEN_BAUSTELLE_PASSIV -> CopperOrange
+        site == SiteType.FIRMENSITZ -> CyanPrimary
+        site == SiteType.LAGERORT -> BrassYellow
+        site == SiteType.FABRIKHALLEN -> Color(0xFFEF4444)
+        site == SiteType.WERKSTATT -> Color(0xFFEAB308)
+        else -> Color(0xFF38BDF8)
     }
 
     Card(
@@ -86,7 +95,7 @@ fun PlaceCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        border = androidx.compose.foundation.BorderStroke(1.dp, SurfaceCardBorder)
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isLostPlace) CrimsonAlert.copy(alpha = 0.5f) else SurfaceCardBorder)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -108,7 +117,7 @@ fun PlaceCard(
                             .background(badgeColor, CircleShape)
                     )
                     Text(
-                        text = site.displayName,
+                        text = if (isLostPlace) "LOST PLACE" else if (isLeerstand) "LEERSTAND" else site.displayName,
                         color = badgeColor,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -168,13 +177,13 @@ fun PlaceCard(
                 )
             }
 
-            // Material inventory summary pills
-            if (placeWithMaterials.materials.isNotEmpty()) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+            // Material inventory summary pills & badges
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (placeWithMaterials.materials.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .background(CopperOrange.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
@@ -205,24 +214,62 @@ fun PlaceCard(
                         )
                     }
 
-                    if (place.isBuilding) {
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0xFF1E293B), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 2.dp)
-                        ) {
-                            Text("Gebäude", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                    Box(
+                        modifier = Modifier
+                            .background(CyanPrimary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .border(0.5.dp, CyanPrimary.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "${placeWithMaterials.materials.sumOf { it.quantity }} Posten",
+                            color = CyanPrimary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+
+                if (isRail) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFF0369A1).copy(alpha = 0.25f), RoundedCornerShape(4.dp))
+                            .border(0.5.dp, Color(0xFF38BDF8), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Icon(Icons.Default.Train, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(10.dp))
+                            Text("OSINT Rail", color = Color(0xFF38BDF8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
+                }
 
-                    if (place.hasUndergroundUtility) {
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0xFF0F2942), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 2.dp)
-                        ) {
-                            Text("Bodenleitungen", color = Color(0xFF38BDF8), fontSize = 10.sp)
+                if (place.hasUndergroundUtility) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFF78350F).copy(alpha = 0.25f), RoundedCornerShape(4.dp))
+                            .border(0.5.dp, CopperOrange, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Icon(Icons.Default.SouthEast, contentDescription = null, tint = CopperOrange, modifier = Modifier.size(10.dp))
+                            Text(
+                                text = if (place.undergroundCableLengthM > 0) "Erdtrasse ${place.undergroundCableLengthM.toInt()}m" else "Erdkabel",
+                                color = CopperOrange,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
+                    }
+                }
+
+                if (place.isBuilding) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFF1E293B), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Text("Gebäude", color = Color(0xFF94A3B8), fontSize = 10.sp)
                     }
                 }
             }

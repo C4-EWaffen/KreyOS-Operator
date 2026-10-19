@@ -9,6 +9,8 @@ enum class CraftType(val displayName: String, val code: String) {
     FACTORY_HALL("Fabriken & Industriehallen", "factory_hall"),
     CONSTRUCTION("Baustellen", "construction"),
     UTILITY_POWER("Umspannwerk & Leitungsnetz", "utility_power"),
+    RAIL_CARGO("OSINT Rail & Güterverkehr", "rail_cargo"),
+    LOST_PLACE("Lost Place & Leerstand", "lost_place"),
     OTHER("Sonstige Gewerbe", "other")
 }
 
@@ -17,9 +19,21 @@ enum class SiteType(val displayName: String) {
     LAGERORT("Lagerort"),
     KUNDEN_BAUSTELLE_AKTIV("Kunden-Baustelle (Aktiv)"),
     KUNDEN_BAUSTELLE_PASSIV("Kunden-Baustelle (Passiv)"),
+    LEERSTAND_VERKAUF("Leerstand / Zur Miete & Kauf"),
+    LOST_PLACE_INDUSTRIE("Lost Place / Stillgelegt"),
+    GUETERBAHNHOF_GLEISANSCHLUSS("Gleisanschluss & Güterbahnhof"),
     FABRIKHALLEN("Fabrikhalle / Industrie"),
     WERKSTATT("Werkstatt"),
     SONSTIGES("Sonstiges")
+}
+
+enum class StorageLocation(val displayName: String, val badge: String) {
+    OBERIRDISCH_HALLE("Oberirdisch / Halle", "Halle"),
+    ERDREICH_TRASSE("In der Erde / Erdtrasse", "Erde / Tiefbau"),
+    KABELKANAL_SCHACHT("Kabelkanal / Schacht", "Kanal"),
+    KELLER_FUNDAMENT("Keller / Fundament", "Keller"),
+    CONTAINER_DEPOT("Container / Bauwagen", "Container"),
+    GLEISBETT_VERLADUNG("Gleisbett / Laderampe", "Gleise")
 }
 
 enum class MetalType(
