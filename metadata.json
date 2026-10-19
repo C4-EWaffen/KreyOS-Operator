@@ -1,0 +1,6 @@
+{
+  "name": "KreyOS",
+  "description": "Industrial & Craft Site Scout, Overpass Radar and Metal Valuation Tracker for commercial facilities, craft trades, workshops, and materials.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

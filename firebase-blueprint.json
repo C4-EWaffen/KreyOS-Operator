@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "User": {
+      "path": "users/{userId}",
+      "fields": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "Place": {
+      "path": "users/{userId}/places/{placeId}",
+      "fields": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "craftType": { "type": "string" },
+        "siteType": { "type": "string" },
+        "isBuilding": { "type": "boolean" },
+        "hasUndergroundUtility": { "type": "boolean" },
+        "status": { "type": "string" },
+        "lat": { "type": "number" },
+        "lon": { "type": "number" },
+        "address": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "Material": {
+      "path": "users/{userId}/places/{placeId}/materials/{materialId}",
+      "fields": {
+        "id": { "type": "string" },
+        "placeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "materialName": { "type": "string" },
+        "metalType": { "type": "string" },
+        "weightKg": { "type": "number" },
+        "pricePerKg": { "type": "number" },
+        "totalValueEur": { "type": "number" },
+        "condition": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      }
+    }
+  }
+}
