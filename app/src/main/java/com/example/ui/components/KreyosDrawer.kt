@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.Factory
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Plumbing
 import androidx.compose.material.icons.filled.Roofing
@@ -69,6 +70,8 @@ fun KreyosDrawerContent(
     onSelectCraftPreset: (CraftType?) -> Unit,
     onAddPlaceClick: () -> Unit,
     onExportJsonClick: () -> Unit,
+    onLockClick: () -> Unit,
+    onChangePinClick: () -> Unit,
     onCloseDrawer: () -> Unit,
     totalPlacesCount: Int,
     totalWeightKg: Double,
@@ -319,6 +322,79 @@ fun KreyosDrawerContent(
         ) {
             Icon(Icons.Default.FileDownload, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
             Text("Daten als JSON exportieren", color = TextSecondary, fontSize = 12.sp)
+        }
+
+        // Security / PIN Lock Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(SurfaceCard, RoundedCornerShape(6.dp))
+                .border(1.dp, CyanPrimary.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                .padding(10.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(16.dp))
+                        Text("SICHERHEIT", color = CyanPrimary, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .background(CyanPrimary.copy(alpha = 0.15f), RoundedCornerShape(3.dp))
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                    ) {
+                        Text("PIN AKTIV", color = CyanPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Text(
+                    text = "Zugriffsschutz aktiv (Standard-PIN: 0000). Keine Google-Anmeldung erforderlich.",
+                    color = TextMuted,
+                    fontSize = 11.sp
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(SurfaceCardBorder, RoundedCornerShape(4.dp))
+                            .clickable {
+                                onChangePinClick()
+                                onCloseDrawer()
+                            }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("PIN ÄNDERN", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(Color(0xFFEF4444).copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                            .border(1.dp, Color(0xFFEF4444), RoundedCornerShape(4.dp))
+                            .clickable {
+                                onLockClick()
+                                onCloseDrawer()
+                            }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("SPERREN", color = Color(0xFFEF4444), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

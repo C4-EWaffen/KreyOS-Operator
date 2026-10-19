@@ -57,9 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.AuthScreen
+import com.example.ui.ChangePinDialog
 import com.example.ui.KreyosViewModel
 import com.example.ui.NavigationTab
+import com.example.ui.PinLockScreen
 import com.example.ui.components.AddMaterialDialog
 import com.example.ui.components.AddPlaceDialog
 import com.example.ui.components.DaylightBar
@@ -90,22 +91,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyApplicationTheme {
-                var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+                var isUnlocked by remember { mutableStateOf(false) }
 
-                DisposableEffect(Unit) {
-                    val authListener = FirebaseAuth.AuthStateListener { auth ->
-                        currentUser = auth.currentUser
-                    }
-                    FirebaseAuth.getInstance().addAuthStateListener(authListener)
-                    onDispose {
-                        FirebaseAuth.getInstance().removeAuthStateListener(authListener)
-                    }
-                }
-
-                if (currentUser == null) {
-                    AuthScreen(onAuthSuccess = { currentUser = FirebaseAuth.getInstance().currentUser })
+                if (!isUnlocked) {
+                    PinLockScreen(onUnlocked = { isUnlocked = true })
                 } else {
-                    KreyosApp()
+                    KreyosApp(onLockApp = { isUnlocked = false })
                 }
             }
         }
@@ -114,7 +105,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KreyosApp(viewModel: KreyosViewModel = viewModel()) {
+fun KreyosApp(
+    viewModel: KreyosViewModel = viewModel(),
+    onLockApp: () -> Unit = {}
+) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
@@ -130,6 +124,7 @@ fun KreyosApp(viewModel: KreyosViewModel = viewModel()) {
     val selectedPlace by viewModel.selectedPlace.collectAsState()
     val showAddPlaceDialog by viewModel.showAddPlaceDialog.collectAsState()
     val placeForAddingMaterial by viewModel.placeForAddingMaterial.collectAsState()
+    var showChangePinDialog by remember { mutableStateOf(false) }
 
     val detailSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -190,6 +185,13 @@ fun KreyosApp(viewModel: KreyosViewModel = viewModel()) {
                     val json = viewModel.exportPlacesJson()
                     clipboardManager.setText(AnnotatedString(json))
                     Toast.makeText(context, "JSON in Zwischenablage kopiert!", Toast.LENGTH_LONG).show()
+                },
+                onLockClick = {
+                    coroutineScope.launch { drawerState.close() }
+                    onLockApp()
+                },
+                onChangePinClick = {
+                    showChangePinDialog = true
                 },
                 onCloseDrawer = {
                     coroutineScope.launch { drawerState.close() }
@@ -419,6 +421,16 @@ fun KreyosApp(viewModel: KreyosViewModel = viewModel()) {
                     condition = condition,
                     notes = notes
                 )
+            }
+        )
+    }
+
+    // Change PIN Dialog
+    if (showChangePinDialog) {
+        ChangePinDialog(
+            onDismiss = { showChangePinDialog = false },
+            onPinChanged = {
+                Toast.makeText(context, "Sicherheits-PIN erfolgreich aktualisiert!", Toast.LENGTH_SHORT).show()
             }
         )
     }
